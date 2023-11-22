@@ -1,0 +1,45 @@
+﻿@page "/minnies"
+
+<PageTitle>Минифигурки</PageTitle>
+
+<h1>Генератор минифигурок</h1>
+
+<p>
+    <h2>Добавить минифигурку</h2>
+    <div class="form-group">
+        <label for="minnieName" class="form-label">Имя персонажа</label>
+        <InputText class="form-control" id="minnieName" @bind-Value="@_uploadedName"/>
+
+        <label for="minnieAvatar" class="form-label">Загрузите картинку вашего персонажа</label>
+        <InputFile accept="image/*" class="form-control" id="minnieAvatar" OnChange="@UploadMinnieFile"/>
+
+        <button class="btn btn-primary" @onclick="@CreateMinnie">Добавить минифигурку</button>
+    </div>
+</p>
+<p>
+    <h2>Импорт минифигурок</h2>
+    <div class="form-group">
+            <label for="jsonImport" class="form-label">Загрузите json файл</label>
+            <InputFile accept="application/json" class="form-control" id="jsonImport" OnChange="@ImportMinnies"/>
+    </div>
+</p>
+<p>
+    <h2>Список минифигурок</h2>
+    <ul class="list-group">
+        @foreach (var minnie in _minnies)
+        {
+            <li class="list-group-item">
+                <span onclick="@(() => DeleteMinnie(minnie))" title="Удалить">❌</span>
+                <span onclick="@(() => CloneMinnie(minnie))" title="Клонировать">✖️</span>
+                @minnie.Name
+            </li>
+        }
+    </ul>
+</p>
+<p>
+    @((MarkupString)(_preparedSvg = PrepareSvg()))
+</p>
+<p>
+    <button class="btn btn-success" @onclick="@DownloadJson">Скачать Json</button>
+    <button class="btn btn-success" @onclick="@DownloadSvg" disabled="@(_preparedSvg is null)">Скачать SVG</button>
+</p>
