@@ -144,7 +144,7 @@ public partial class Minnies
     private async Task DownloadJson()
     {
         var json = JsonSerializer.Serialize(_minnies, JsonOptions);
-        await DownloadJsInterop.DownloadAsync(json, "minnies.json");
+        await DownloadJsInterop.DownloadAsync(json, $"minnies-{DateTime.Now:s}.json");
     }
 
     private async Task DownloadSvg()
