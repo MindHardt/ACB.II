@@ -11,7 +11,7 @@ namespace ACB.II.Components.Pages;
 
 public partial class Minnies
 {
-    private const int MaxImageSize = 1024 * 10; // 10KB
+    private const int MaxImageSize = 1024 * 1024; // 1MB
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -21,7 +21,7 @@ public partial class Minnies
     private string? _originalSvg;
     private string? _preparedSvg;
     private readonly List<Minnie> _minnies = new();
-
+    
     private IBrowserFile? _uploadedFile;
     private string _uploadedName = string.Empty;
 
@@ -37,8 +37,8 @@ public partial class Minnies
             return;
         }
 
-        var image = await _uploadedFile.RequestImageFileAsync("jpg", 128, 256);
-        await using var imageStream = image.OpenReadStream();
+        var image = await _uploadedFile.RequestImageFileAsync("jpg", 256, 512);
+        await using var imageStream = image.OpenReadStream(MaxImageSize);
         var ms = new MemoryStream();
         await imageStream.CopyToAsync(ms);
 
@@ -48,8 +48,15 @@ public partial class Minnies
         _minnies.Add(minnie);
     }
 
-    private void UploadMinnieFile(InputFileChangeEventArgs e)
-        => _uploadedFile = e.File;
+    private void UploadMinnieFile(InputFileChangeEventArgs e) => _uploadedFile = e.File;
+
+    private void ReadFileName()
+    {
+        if (_uploadedFile is not null)
+        {
+            _uploadedName = Path.GetFileNameWithoutExtension(_uploadedFile.Name);
+        }
+    }
 
     private async Task ImportMinnies(InputFileChangeEventArgs e)
     {

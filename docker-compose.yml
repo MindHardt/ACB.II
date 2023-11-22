@@ -1,0 +1,11 @@
+﻿services:
+  
+  acb.ii:
+    image: acb.ii
+    container_name: acb.ii
+    restart: unless-stopped
+    ports:
+      - 9996:80
+    build:
+      context: .
+      dockerfile: ACB.II/Dockerfile
