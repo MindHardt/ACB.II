@@ -37,12 +37,11 @@ public partial class Minnies
             return;
         }
 
-        var image = await _uploadedFile.RequestImageFileAsync("jpg", 256, 512);
+        var image = await _uploadedFile.RequestImageFileAsync("jpg", 450, 660);
         await using var imageStream = image.OpenReadStream(MaxImageSize);
-        var ms = new MemoryStream();
-        await imageStream.CopyToAsync(ms);
+        var imageBytes = await imageStream.LoadToByteArrayAsync();
 
-        var base64 = Convert.ToBase64String(ms.ToArray());
+        var base64 = Convert.ToBase64String(imageBytes);
         var minnie = new Minnie(_uploadedName, base64, MinnieSize.Default);
 
         _minnies.Add(minnie);
@@ -118,33 +117,35 @@ public partial class Minnies
         }
         var processed = PreparationRegex().Replace(_originalSvg, match =>
         {
-            var name = match.Groups["Name"].Value;
+            var nameGroup = match.Groups["Name"].Value;
 
-            var index = int.Parse(name[(name.IndexOf('_') + 1)..]) - 1;
-            var minnie = _minnies.Count > index
-                ? _minnies[index]
-                : null;
+            var parts = nameGroup.Split('_');
+            var (fieldType, index) = (parts[0], int.Parse(parts[1]) - 1);
 
+            var minnie = _minnies.ElementAtOrDefault(index);
             if (minnie is null)
             {
                 return string.Empty;
             }
 
-            return name.StartsWith("name")
-                ? HttpUtility.HtmlEncode(minnie.Name)
-                : minnie.AvatarBase64;
+            return fieldType switch
+            {
+                "name" => minnie.NormalizedName,
+                "avatar" => minnie.AvatarBase64,
+                _ => string.Empty
+            };
         });
         return processed;
     }
 
-    [GeneratedRegex(@"\$\{(?<Name>[a-z_0-9]+)\}")]
+    [GeneratedRegex(@"\$\{(?<Name>[a-z]+_[0-9]+)\}")]
     private static partial Regex PreparationRegex();
     private static Regex DefaultPortraitRegex => new(Regex.Escape(DefaultPortraitBase64));
 
     private async Task DownloadJson()
     {
         var json = JsonSerializer.Serialize(_minnies, JsonOptions);
-        await DownloadJsInterop.DownloadAsync(json, $"minnies-{DateTime.Now:s}.json");
+        await DownloadJsInterop.DownloadAsync(json, $"{GetFileName()}.json");
     }
 
     private async Task DownloadSvg()
@@ -154,11 +155,18 @@ public partial class Minnies
             return;
         }
 
-        await DownloadJsInterop.DownloadAsync(_preparedSvg, "minnies.svg");
+        await DownloadJsInterop.DownloadAsync(_preparedSvg, $"{GetFileName()}.svg");
     }
+
+    private string GetFileName() => _minnies.Count == 1
+        ? _minnies[0].Name
+        : $"minnies-{DateTime.Now:s}";
 }
 
-public record Minnie(string Name, string AvatarBase64, MinnieSize Size);
+public record Minnie(string Name, string AvatarBase64, MinnieSize Size)
+{
+    public string NormalizedName { get; } = HttpUtility.HtmlEncode(Name);
+}
 
 public enum MinnieSize
 {
