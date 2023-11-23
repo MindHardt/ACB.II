@@ -1,30 +1,26 @@
-﻿using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using ACB.II.JsInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.Options;
 
 namespace ACB.II.Components.Pages;
 
 public partial class Minnies
 {
     private const int MaxImageSize = 1024 * 1024; // 1MB
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        WriteIndented = false
-    };
 
     private string? _originalSvg;
     private string? _preparedSvg;
     private readonly List<Minnie> _minnies = new();
-    
+
     private IBrowserFile? _uploadedFile;
     private string _uploadedName = string.Empty;
 
+    [Inject]
+    public IOptions<JsonSerializerOptions> JsonOptions { get; set; } = null!;
     [Inject]
     public HttpClient HttpClient { get; set; } = null!;
     [Inject]
@@ -59,13 +55,11 @@ public partial class Minnies
 
     private async Task ImportMinnies(InputFileChangeEventArgs e)
     {
-        const int fileSize = 0xFFFFFF; // 16MB
+        const int fileSize = 0x1FFFFFF; // 32MB
         await using var contentStream = e.File.OpenReadStream(fileSize);
-        var ms = new MemoryStream();
-        await contentStream.CopyToAsync(ms);
 
-        var json = Encoding.UTF8.GetString(ms.ToArray());
-        var importedMinnies = JsonSerializer.Deserialize<Minnie[]>(json, JsonOptions)!;
+        var json = await contentStream.LoadToStringAsync();
+        var importedMinnies = JsonSerializer.Deserialize<Minnie[]>(json, JsonOptions.Value)!;
 
         _minnies.AddRange(importedMinnies);
     }
@@ -144,7 +138,7 @@ public partial class Minnies
 
     private async Task DownloadJson()
     {
-        var json = JsonSerializer.Serialize(_minnies, JsonOptions);
+        var json = JsonSerializer.Serialize(_minnies, JsonOptions.Value);
         await DownloadJsInterop.DownloadAsync(json, $"{GetFileName()}.json");
     }
 
